@@ -1279,6 +1279,7 @@ add_library(
   src/engine/channels/engineaux.cpp
   src/engine/channels/enginechannel.cpp
   src/engine/channels/enginedeck.cpp
+  src/engine/channels/stemmove.cpp
   src/engine/channels/enginemicrophone.cpp
   src/engine/controls/bpmcontrol.cpp
   src/engine/controls/clockcontrol.cpp

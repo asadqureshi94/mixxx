@@ -2065,33 +2065,41 @@ bool TrackDAO::detectMovedTracks(
     return true;
 }
 
-void TrackDAO::hideAllTracks(const QDir& rootDir) const {
+QList<TrackId> TrackDAO::hideAllTracks(const QDir& rootDir) const {
     const QString locationPathPrefix = locationPathPrefixFromRootDir(rootDir);
     QSqlQuery query(m_database);
     query.prepare(QStringLiteral(
             "SELECT library.id FROM library INNER JOIN track_locations "
             "ON library.location=track_locations.id "
-            "WHERE "
-            "INSTR(track_locations.location,:locationPathPrefix)=1"
-            "locationPathPrefix"));
+            "WHERE library.mixxx_deleted=0 AND "
+            "INSTR(track_locations.location,:locationPathPrefix)=1"));
     query.bindValue(":locationPathPrefix", locationPathPrefix);
     if (!query.exec()) {
         LOG_FAILED_QUERY(query) << "could not get tracks within directory:" << rootDir;
         DEBUG_ASSERT(!"Failed query");
+        return {};
     }
 
-    QStringList trackIds;
-    const int idColumn = query.record().indexOf(LIBRARYTABLE_MIXXXDELETED);
+    QList<TrackId> trackIds;
+    QStringList trackIdStrings;
+    const int idColumn = query.record().indexOf(LIBRARYTABLE_ID);
     while (query.next()) {
-        trackIds.append(TrackId(query.value(idColumn)).toString());
+        const TrackId trackId(query.value(idColumn));
+        trackIds.append(trackId);
+        trackIdStrings.append(trackId.toString());
+    }
+    if (trackIds.isEmpty()) {
+        return {};
     }
 
     query.prepare(QString("UPDATE library SET mixxx_deleted=1 "
-                          "WHERE id in (%1)").arg(trackIds.join(",")));
+                          "WHERE id in (%1)").arg(trackIdStrings.join(",")));
     if (!query.exec()) {
         LOG_FAILED_QUERY(query);
         DEBUG_ASSERT(!"Failed query");
+        return {};
     }
+    return trackIds;
 }
 
 bool TrackDAO::verifyRemainingTracks(

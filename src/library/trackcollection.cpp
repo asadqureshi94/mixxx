@@ -347,7 +347,11 @@ bool TrackCollection::hideTracks(const QList<TrackId>& trackIds) {
 void TrackCollection::hideAllTracks(const QDir& rootDir) {
     DEBUG_ASSERT_QOBJECT_THREAD_AFFINITY(this);
 
-    m_trackDao.hideAllTracks(rootDir);
+    const QList<TrackId> trackIds = m_trackDao.hideAllTracks(rootDir);
+    if (!trackIds.isEmpty()) {
+        // Update the track cache so the hidden tracks disappear from the library view
+        m_trackDao.afterHidingTracks(trackIds);
+    }
 }
 
 bool TrackCollection::unhideTracks(const QList<TrackId>& trackIds) {

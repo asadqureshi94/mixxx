@@ -105,9 +105,24 @@ class ColumnCache : public QObject {
     }
 
     inline QString columnSortForFieldIndex(int index) const {
+        if (index >= 0 && index == m_columnIndexByEnum[COLUMN_LIBRARYTABLE_BPM]) {
+            // Sort by the BPM as it is displayed, so tracks showing the same BPM
+            // are treated as equal and a secondary sort (e.g. key) applies.
+            return QStringLiteral("round(%1, %2)")
+                    .arg(columnNameForFieldIndex(index))
+                    .arg(s_bpmSortPrecision);
+        }
         // Check if there is a special sort clause
         QString format = m_columnSortByIndex.value(index, "%1");
         return format.arg(columnNameForFieldIndex(index));
+    }
+
+    /// Number of decimals the BPM column is shown (and sorted) with.
+    static void setBpmSortPrecision(int precision) {
+        s_bpmSortPrecision = precision;
+    }
+    static int bpmSortPrecision() {
+        return s_bpmSortPrecision;
     }
 
     KeyUtils::KeyNotation keyNotation() const {
@@ -119,6 +134,9 @@ class ColumnCache : public QObject {
 
   private slots:
     void slotSetKeySortOrder(double);
+
+  private:
+    static inline int s_bpmSortPrecision = 1;
 
   private:
     void insertColumnSortByEnum(

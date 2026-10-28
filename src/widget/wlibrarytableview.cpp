@@ -7,6 +7,7 @@
 #include <QHelpEvent>
 #include <QScrollBar>
 #include <QToolTip>
+#include <algorithm>
 
 #include "moc_wlibrarytableview.cpp"
 #include "util/math.h"
@@ -331,18 +332,11 @@ QModelIndex WLibraryTableView::moveCursor(CursorAction cursorAction,
             if (current.isValid()) {
                 const int row = currentIndex().row();
                 const int column = currentIndex().column();
+                // Asad's build: stop at the top/bottom instead of wrapping around
                 if (cursorAction == QAbstractItemView::MoveDown) {
-                    if (row + 1 < pModel->rowCount()) {
-                        return pModel->index(row + 1, column);
-                    } else if (!modifiers.testFlag(Qt::ShiftModifier)) {
-                        return pModel->index(0, column);
-                    }
+                    return pModel->index(std::min(row + 1, pModel->rowCount() - 1), column);
                 } else {
-                    if (row - 1 >= 0) {
-                        return pModel->index(row - 1, column);
-                    } else if (!modifiers.testFlag(Qt::ShiftModifier)) {
-                        return pModel->index(pModel->rowCount() - 1, column);
-                    }
+                    return pModel->index(std::max(row - 1, 0), column);
                 }
             } else {
                 // If the cursor does not yet exist (because the view has not

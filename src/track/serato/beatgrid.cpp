@@ -313,8 +313,15 @@ bool SeratoBeatGrid::parseID3(
     // it immediately without making any changes.
     // For now, we only read it to be able to dump the exact same byte sequence
     // later on.
-    quint8 footer;
-    stream >> footer;
+    quint8 footer = 0;
+    if (stream.atEnd()) {
+        // Asad's build: some files written by older Serato versions end right
+        // after the terminal marker without the footer byte. The beatgrid
+        // itself is complete, so accept it instead of discarding it.
+        kLogger.info() << "Serato BeatGrid has no footer byte, using 0";
+    } else {
+        stream >> footer;
+    }
 
     if (stream.status() != QDataStream::Status::Ok) {
         kLogger.warning() << "Parsing SeratoBeatGrid failed:"

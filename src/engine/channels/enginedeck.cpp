@@ -80,6 +80,15 @@ EngineDeck::EngineDeck(
                 ConfigKey(getGroupForStem(getGroup(), stemIdx), QStringLiteral("mute")));
         pMuteButton->setButtonMode(mixxx::control::ButtonMode::PowerWindow);
         m_stemMute.push_back(std::move(pMuteButton));
+
+        m_stemMoves.push_back(std::make_unique<mixxx::StemMove>());
+        m_stemMoveControl.push_back(std::make_unique<ControlObject>(
+                ConfigKey(getGroupForStem(getGroup(), stemIdx), QStringLiteral("move"))));
+        auto pActive = std::make_unique<ControlObject>(
+                ConfigKey(getGroupForStem(getGroup(), stemIdx), QStringLiteral("move_active")));
+        pActive->setReadOnly();
+        m_stemMoveActive.push_back(std::move(pActive));
+        m_stemMoveRequested.push_back(0);
     }
 #endif
 }
@@ -97,6 +106,10 @@ void EngineDeck::slotTrackLoaded(TrackPointer pNewTrack,
             m_stemGain[stemIdx]->set(1.0);
             m_stemMute[stemIdx]->set(0.0);
         }
+    }
+    // a new track never starts in the middle of a stem move
+    for (const auto& pMove : m_stemMoveControl) {
+        pMove->set(0.0);
     }
     m_stemClonedState = false;
     if (pNewTrack) {
@@ -159,9 +172,6 @@ void EngineDeck::processStem(CSAMPLE* pOut, const std::size_t bufferSize) {
     for (unsigned int stemIdx = 0; stemIdx < stemCount;
             stemIdx++) {
         int chOffset = stemIdx * mixxx::audio::ChannelCount::stereo();
-        float stemGain = m_stemMute[stemIdx]->toBool()
-                ? 0.0f
-                : static_cast<float>(m_stemGain[stemIdx]->get());
         // Extract the stem frames into the output buffer (LR......LR...... -> LRLR)
         SampleUtil::copyOneStereoFromMulti(
                 pOut,
@@ -169,6 +179,12 @@ void EngineDeck::processStem(CSAMPLE* pOut, const std::size_t bufferSize) {
                 numFrames,
                 chCount,
                 chOffset);
+        if (stemIdx < m_stemMoves.size()) {
+            processStemMove(stemIdx, pOut, numFrames, sampleRate);
+        }
+        float stemGain = m_stemMute[stemIdx]->toBool()
+                ? 0.0f
+                : static_cast<float>(m_stemGain[stemIdx]->get());
         // Mix the stem frames with the right gain after proceeding its effect.
         pEngineEffectsManager->processPostFaderInPlace(m_stems[stemIdx].handle(),
                 m_pEffectsManager->getMainHandle(),
@@ -195,6 +211,46 @@ void EngineDeck::processStem(CSAMPLE* pOut, const std::size_t bufferSize) {
 
     // Mixxx all the stem tracks together
     SampleUtil::mixMultichannelToStereo(pOut, pIn, numFrames, chCount);
+}
+
+void EngineDeck::processStemMove(unsigned int stemIdx,
+        CSAMPLE* pStereo,
+        SINT numFrames,
+        mixxx::audio::SampleRate sampleRate) {
+    mixxx::StemMove& move = *m_stemMoves[stemIdx];
+    const bool muted = m_stemMute[stemIdx]->toBool();
+
+    // Start or stop a move when the controller asks for one
+    const int requested = static_cast<int>(m_stemMoveControl[stemIdx]->get());
+    if (requested != m_stemMoveRequested[stemIdx]) {
+        m_stemMoveRequested[stemIdx] = requested;
+        if (requested > 0 && requested < mixxx::StemMove::kTypeCount && !muted) {
+            const mixxx::Bpm bpm = m_pBuffer->getBpm();
+            move.start(static_cast<mixxx::StemMove::Type>(requested),
+                    sampleRate.toDouble(),
+                    bpm.isValid() ? bpm.value() : 0.0);
+        } else {
+            move.reset();
+        }
+    } else if (move.type() != mixxx::StemMove::Type::None &&
+            (move.isPlaying() ? muted : !muted)) {
+        // Muted during the move, or unmuted after it finished: the move is over
+        move.reset();
+        m_stemMoveControl[stemIdx]->set(0.0);
+        m_stemMoveRequested[stemIdx] = 0;
+    }
+
+    if (move.type() != mixxx::StemMove::Type::None) {
+        move.process(pStereo, static_cast<std::size_t>(numFrames));
+        if (move.isFinished() && !muted) {
+            // The move has faded out: silence the stem the normal way
+            m_stemMute[stemIdx]->set(1.0);
+        }
+    }
+    const double active = move.isPlaying() ? 1.0 : 0.0;
+    if (m_stemMoveActive[stemIdx]->get() != active) {
+        m_stemMoveActive[stemIdx]->forceSet(active);
+    }
 }
 
 void EngineDeck::cloneStemState(const EngineDeck* deckToClone) {

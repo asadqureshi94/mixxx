@@ -95,6 +95,7 @@ void BaseTrackTableModel::setBpmColumnPrecision(int precision) {
         precision = BaseTrackTableModel::kBpmColumnPrecisionMaximum;
     }
     s_bpmColumnPrecision = precision;
+    ColumnCache::setBpmSortPrecision(s_bpmColumnPrecision);
 }
 
 // static

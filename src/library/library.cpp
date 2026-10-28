@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QDir>
 #include <QMessageBox>
+#include <QTimer>
 
 #include "control/controlobject.h"
 #include "controllers/keyboard/keyboardeventfilter.h"
@@ -98,8 +99,6 @@ Library::Library(
             Qt::DirectConnection /* signal-to-signal */);
 #endif
 
-    addFeature(new AutoDJFeature(this, m_pConfig, pPlayerManager));
-
     m_pPlaylistFeature = new PlaylistFeature(this, UserSettingsPointer(m_pConfig));
     addFeature(m_pPlaylistFeature);
 #ifdef __ENGINEPRIME__
@@ -114,6 +113,9 @@ Library::Library(
             &Library::exportPlaylist, // signal-to-signal
             Qt::DirectConnection);
 #endif
+
+    // Asad's build: Playlists sit directly under Tracks, Auto DJ after them
+    addFeature(new AutoDJFeature(this, m_pConfig, pPlayerManager));
 
     m_pCrateFeature = new CrateFeature(this, m_pConfig);
     addFeature(m_pCrateFeature);
@@ -345,6 +347,13 @@ void Library::bindSidebarWidget(WLibrarySidebar* pSidebarWidget) {
 
     // Setup the sources view
     pSidebarWidget->setModel(m_pSidebarModel);
+    // Asad's build: open the Playlists list straight away
+    const int playlistsRow = static_cast<int>(m_features.indexOf(m_pPlaylistFeature));
+    if (playlistsRow >= 0) {
+        QTimer::singleShot(0, pSidebarWidget, [this, pSidebarWidget, playlistsRow]() {
+            pSidebarWidget->expand(m_pSidebarModel->index(playlistsRow, 0));
+        });
+    }
     connect(m_pSidebarModel,
             &SidebarModel::selectIndex,
             pSidebarWidget,

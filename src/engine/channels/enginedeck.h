@@ -7,6 +7,9 @@
 #include "soundio/soundmanagerutil.h"
 #include "track/track_decl.h"
 #include "util/samplebuffer.h"
+#ifdef __STEM__
+#include "engine/channels/stemmove.h"
+#endif
 
 class EnginePregain;
 class EngineBuffer;
@@ -88,6 +91,11 @@ class EngineDeck : public EngineChannel, public AudioDestination {
 #ifdef __STEM__
     // Process multiple channels and mix them together into the passed buffer
     void processStem(CSAMPLE* pOutput, const std::size_t bufferSize);
+    // Runs any stem move on one stem (stereo, in place) before its gain is applied
+    void processStemMove(unsigned int stemIdx,
+            CSAMPLE* pStereo,
+            SINT numFrames,
+            mixxx::audio::SampleRate sampleRate);
 #endif
 
     std::vector<ChannelHandleAndGroup> m_stems;
@@ -104,6 +112,12 @@ class EngineDeck : public EngineChannel, public AudioDestination {
     std::vector<std::unique_ptr<ControlPotmeter>> m_stemGain;
     std::vector<std::unique_ptr<ControlPushButton>> m_stemMute;
     bool m_stemClonedState;
+    // Asad's build: one-shot stem moves (echo out, vinyl brake, reverb out, filter sweep).
+    // [ChannelN_StemM],move = 1..4 starts a move, 0 stops it; move_active shows it playing.
+    std::vector<std::unique_ptr<mixxx::StemMove>> m_stemMoves;
+    std::vector<std::unique_ptr<ControlObject>> m_stemMoveControl;
+    std::vector<std::unique_ptr<ControlObject>> m_stemMoveActive;
+    std::vector<int> m_stemMoveRequested;
 #endif
 
     // Begin vinyl passthrough fields

@@ -1721,9 +1721,8 @@ void WTrackTableView::moveSelection(int delta) {
                 if (row + 1 < pModel->rowCount()) {
                     selectRow(row + 1);
                 } else {
-                    // we wrap around at the end of the list so it is faster to get
-                    // to the top of the list again
-                    selectRow(0);
+                    // stop at the end of the list instead of wrapping to the top
+                    return;
                 }
 
                 delta--;
@@ -1733,7 +1732,8 @@ void WTrackTableView::moveSelection(int delta) {
                 if (row - 1 >= 0) {
                     selectRow(row - 1);
                 } else {
-                    selectRow(pModel->rowCount() - 1);
+                    // stop at the top of the list instead of wrapping to the end
+                    return;
                 }
 
                 delta++;

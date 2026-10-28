@@ -1,5 +1,7 @@
 #include "library/basetrackcache.h"
 
+#include <cmath>
+
 #include "library/queryutil.h"
 #include "library/searchquery.h"
 #include "library/searchqueryparser.h"
@@ -691,6 +693,12 @@ int BaseTrackCache::compareColumnValues(int sortColumn,
             sortColumn == fieldIndex(ColumnCache::COLUMN_PLAYLISTTRACKSTABLE_POSITION)) {
         // Sort as floats.
         double delta = val1.toDouble() - val2.toDouble();
+        if (sortColumn == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_BPM)) {
+            // Compare the BPM as it is displayed (see ColumnCache::columnSortForFieldIndex)
+            const double scale = std::pow(10.0, ColumnCache::bpmSortPrecision());
+            delta = std::round(val1.toDouble() * scale) / scale -
+                    std::round(val2.toDouble() * scale) / scale;
+        }
 
         if (fabs(delta) < .00001) {
             result = 0;

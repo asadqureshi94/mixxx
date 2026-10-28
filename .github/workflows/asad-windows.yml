@@ -1,0 +1,120 @@
+# Builds Asad's version of Mixxx as a Windows installer.
+# Runs on every push to the "asad" branch (or by hand from the Actions tab).
+# The installer appears under the run's "Artifacts" when it finishes.
+name: Asad Windows build
+
+on:
+  push:
+    branches: [asad]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows x64 installer
+    runs-on: windows-2022
+    steps:
+      - name: "Check out repository"
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: "Fetch tags from Mixxx (for the version number)"
+        shell: bash
+        run: |
+          git remote add upstream https://github.com/mixxxdj/mixxx.git || true
+          git fetch upstream --force --tags --no-recurse-submodules || true
+
+      - name: "Set up cmake"
+        uses: jwlawson/actions-setup-cmake@v2.2
+        with:
+          cmake-version: "3.30.x"
+
+      - name: "Set up MSVC Developer Command Prompt"
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: "Get build environment name"
+        run: tools/windows_buildenv.bat name
+
+      - name: "Set up build environment"
+        shell: cmd
+        run: tools/windows_buildenv.bat setup
+        env:
+          BUILDENV_BASEPATH: C:\buildenv
+          BUILDENV_RELEASE: TRUE
+
+      - name: "Create build directory"
+        run: mkdir build
+
+      - name: "Configure"
+        run: >-
+          cmake
+          -DBULK=ON
+          -DHSS1394=ON
+          -DLOCALECOMPARE=ON
+          -DMAD=ON
+          -DMEDIAFOUNDATION=ON
+          -DMODPLUG=ON
+          -DQT6=ON
+          -DQML=ON
+          -DWAVPACK=ON
+          -DVCPKG_TARGET_TRIPLET=x64-windows-release
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DCMAKE_PREFIX_PATH="${{ env.CMAKE_PREFIX_PATH }}"
+          -DWARNINGS_FATAL=OFF
+          -DDEBUG_ASSERTIONS_FATAL=OFF
+          -DBATTERY=ON
+          -DBROADCAST=ON
+          -DDOWNLOAD_MANUAL=OFF
+          -DHID=ON
+          -DKEYFINDER=ON
+          -DLILV=ON
+          -DOPUS=ON
+          -DQTKEYCHAIN=ON
+          -DVINYLCONTROL=ON
+          -DBUILD_TESTING=OFF
+          -DBUILD_BENCH=OFF
+          -DCMAKE_VERBOSE_MAKEFILE=OFF
+          ..
+        working-directory: build
+        env:
+          CC: cl
+          CXX: cl
+
+      - name: "Set up MSVC problem matcher"
+        uses: ammaraskar/msvc-problem-matcher@0.3.0
+
+      - name: "Build"
+        run: cmake --build . --config RelWithDebInfo
+        working-directory: build
+        env:
+          CC: cl
+          CXX: cl
+
+      - name: "Install WiX Toolset"
+        shell: pwsh
+        run: |
+          dotnet.exe tool install --global wix --version 6.0.2
+          wix extension add --global WixToolset.UI.wixext/6.0.2
+
+      - name: "Package"
+        id: package
+        working-directory: build
+        run: cpack -G WIX -V
+
+      - name: "Upload failed packaging logs"
+        if: always() && steps.package.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs-packages-wix
+          path: ${{ github.workspace }}/build/_CPack_Packages/win64/WIX/wix.log
+
+      - name: "Upload the installer"
+        uses: actions/upload-artifact@v7
+        with:
+          name: Mixxx-Asad-Windows-installer
+          path: build/*.msi
