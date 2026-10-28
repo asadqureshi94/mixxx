@@ -305,7 +305,8 @@ void WLibrarySidebar::keyPressEvent(QKeyEvent* pEvent) {
         // Ensure the new selection is visible even if it was already selected/
         // focused, like when the topmost item was selected but out of sight and
         // we pressed Up, Home or PageUp.
-        scrollTo(selIndex);
+        // Asad's build: keep the highlighted item in the middle of the list
+        scrollTo(selIndex, QAbstractItemView::PositionAtCenter);
         emit pressed(selIndex);
         return;
     }

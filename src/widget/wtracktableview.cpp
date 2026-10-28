@@ -1341,6 +1341,23 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
         }
     }
     QTableView::keyPressEvent(event);
+
+    // Asad's build: keep the highlighted track in the middle of the list while
+    // browsing with the keyboard or a controller (which sends key presses).
+    switch (event->key()) {
+    case Qt::Key_Up:
+    case Qt::Key_Down:
+    case Qt::Key_PageUp:
+    case Qt::Key_PageDown:
+    case Qt::Key_Home:
+    case Qt::Key_End:
+        if (currentIndex().isValid()) {
+            scrollTo(currentIndex(), QAbstractItemView::PositionAtCenter);
+        }
+        break;
+    default:
+        break;
+    }
 }
 
 void WTrackTableView::resizeEvent(QResizeEvent* event) {
@@ -1722,7 +1739,7 @@ void WTrackTableView::moveSelection(int delta) {
                     selectRow(row + 1);
                 } else {
                     // stop at the end of the list instead of wrapping to the top
-                    return;
+                    break;
                 }
 
                 delta--;
@@ -1733,7 +1750,7 @@ void WTrackTableView::moveSelection(int delta) {
                     selectRow(row - 1);
                 } else {
                     // stop at the top of the list instead of wrapping to the end
-                    return;
+                    break;
                 }
 
                 delta++;
@@ -1748,6 +1765,11 @@ void WTrackTableView::moveSelection(int delta) {
                 delta++;
             }
         }
+    }
+
+    // Asad's build: keep the highlighted track in the middle of the list
+    if (currentIndex().isValid()) {
+        scrollTo(currentIndex(), QAbstractItemView::PositionAtCenter);
     }
 }
 
