@@ -35,7 +35,7 @@ EffectManifestPointer AutoPanEffect::getManifest() {
     period->setUnitsHint(EffectManifestParameter::UnitsHint::Unknown);
     period->setDefaultLinkType(EffectManifestParameter::LinkType::Linked);
     period->setDefaultLinkInversion(EffectManifestParameter::LinkInversion::Inverted);
-    period->setRange(0.0, 2.0, 4.0);
+    period->setRange(0.0, 2.0, 16.0); // Asad's build: up to 16 beats
 
     EffectManifestParameterPointer smoothing = pManifest->addParameter();
     smoothing->setId("smoothing");
@@ -90,7 +90,7 @@ void AutoPanEffect::processChannel(
 
     if (groupFeatures.beat_length.has_value()) {
         // period is a number of beats
-        double beats = std::max(roundToFraction(period, 2), 0.25);
+        double beats = std::max(roundToFraction(period, 8), 0.125);
         period = beats * groupFeatures.beat_length->seconds * engineParameters.sampleRate();
 
         // TODO(xxx) sync phase

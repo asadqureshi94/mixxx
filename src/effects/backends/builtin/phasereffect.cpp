@@ -37,7 +37,7 @@ EffectManifestPointer PhaserEffect::getManifest() {
             "1/4 - 4 seconds if no tempo is detected"));
     period->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
     period->setUnitsHint(EffectManifestParameter::UnitsHint::Beats);
-    period->setRange(0.0, 1.0, 4.0);
+    period->setRange(0.0, 1.0, 16.0); // Asad's build: up to 16 beats
 
     EffectManifestParameterPointer fb = pManifest->addParameter();
     fb->setId("feedback");
@@ -135,7 +135,7 @@ void PhaserEffect::processChannel(
     double periodSamples;
     if (groupFeatures.beat_length.has_value()) {
         // periodParameter is a number of beats
-        periodParameter = std::max(roundToFraction(periodParameter, 2.0), 1 / 4.0);
+        periodParameter = std::max(roundToFraction(periodParameter, 8.0), 1 / 8.0);
         if (m_pTripletParameter->toBool()) {
             periodParameter /= 3.0;
         }

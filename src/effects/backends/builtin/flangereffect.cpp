@@ -119,7 +119,7 @@ void FlangerEffect::processChannel(
     double lfoPeriodFrames;
     if (groupFeatures.beat_length.has_value()) {
         // lfoPeriodParameter is a number of beats
-        lfoPeriodParameter = std::max(roundToFraction(lfoPeriodParameter, 2.0), kMinLfoBeats);
+        lfoPeriodParameter = std::max(roundToFraction(lfoPeriodParameter, 8.0), kMinLfoBeats);
         if (m_pTripletParameter->toBool()) {
             lfoPeriodParameter /= 3.0;
         }

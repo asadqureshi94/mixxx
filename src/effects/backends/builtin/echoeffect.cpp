@@ -50,7 +50,7 @@ EffectManifestPointer EchoEffect::getManifest() {
             "1/8 - 2 seconds if no tempo is detected"));
     delay->setValueScaler(EffectManifestParameter::ValueScaler::Linear);
     delay->setUnitsHint(EffectManifestParameter::UnitsHint::Beats);
-    delay->setRange(0.0, 0.5, 2.0);
+    delay->setRange(0.0, 0.5, 4.0); // Asad's build: up to 4 beats
 
     EffectManifestParameterPointer feedback = pManifest->addParameter();
     feedback->setId("feedback_amount");
@@ -135,7 +135,8 @@ void EchoEffect::processChannel(
     if (groupFeatures.beat_length.has_value()) {
         // period is a number of beats
         if (m_pQuantizeParameter->toBool()) {
-            period = std::max(roundToFraction(period, 4), 1 / 8.0);
+            // Asad's build: 1/16-beat steps down to 1/16 of a beat
+            period = std::max(roundToFraction(period, 16), 1 / 16.0);
             if (m_pTripletParameter->toBool()) {
                 period /= 3.0;
             }

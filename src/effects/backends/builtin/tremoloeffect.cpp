@@ -44,7 +44,7 @@ EffectManifestPointer TremoloEffect::getManifest() {
     rate->setValueScaler(
             EffectManifestParameter::ValueScaler::Logarithmic);
     rate->setUnitsHint(EffectManifestParameter::UnitsHint::Beats);
-    rate->setRange(1.0 / 4, 1, 8);
+    rate->setRange(1.0 / 16, 1, 16); // Asad's build: one cycle per 16 beats to 16 per beat
 
     EffectManifestParameterPointer width = pManifest->addParameter();
     width->setId("width");
